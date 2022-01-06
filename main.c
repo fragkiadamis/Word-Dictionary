@@ -6,7 +6,8 @@
 
 #define HASH_TABLE_SIZE 1024
 
-int findHashPosition(char *word, int word_length) {
+// Hashing function, calculates the position of a word in the hash table;
+int hashingFunction(char *word, int word_length) {
     int sum = 0;
     int characterCount = 0;
     while (*word)
@@ -16,15 +17,16 @@ int findHashPosition(char *word, int word_length) {
         word++;
     }
 
-    return sum % 1024;
+    return sum % HASH_TABLE_SIZE;
 }
 
 int main(void) {
-    char ch, *path = "/home/fragkiadamis/CLionProjects/Assignment_2/files/"; // Files directory path
-    struct dirent *de; // Directory pointer
-    FILE *fptr; // File pointer
+    char ch, *path = "/home/fragkiadamis/CLionProjects/Assignment_2/files/";
+    struct dirent *de;
+    FILE *fptr;
     char *hash[HASH_TABLE_SIZE];
 
+    // Open directory, terminate if the process fails.
     DIR *dr = opendir(path);
     if (dr == NULL)
     {
@@ -32,6 +34,7 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
+    // While there are directory entries...
     while ((de = readdir(dr)) != NULL)
     {
         // Filter out current and parent directory entries
@@ -39,24 +42,31 @@ int main(void) {
             continue;
         else
         {
+            // Open file entry.
             char *filePath = (char*)malloc((strlen(path) + strlen(de->d_name) + 1) * sizeof(char));
             strcat(strcat(filePath, path), de->d_name);
             fptr = fopen(filePath, "r");
 
+            // Create a pointer to store each word
             char *word = (char*)malloc(2 * sizeof(char));
             int bytes_allocated = 0;
+
+            // While it's not the End Of File...
+            // Isolate each word. Words are distinguished by either a space or a newline
             while((ch = fgetc(fptr)) != EOF)
             {
-                if(ch == '\n' || ch == ' ')
+                if(ch == '\n' || ch == ' ') // The word is over
                 {
-                    word[bytes_allocated] = '\0';
-                    int pos = findHashPosition(word, strlen(word));
+                    word[bytes_allocated] = '\0'; // Add null terminator
+                    int pos = hashingFunction(word, strlen(word)); // Find the word's position in the hash table.
                     printf("word: %s, pos: %d\n", word, pos);
 
+                    // Default the word and continue to next one.
                     word = (char*)malloc(2 * sizeof(char));
                     bytes_allocated = 0;
                     continue;
                 }
+                // Append character to word
                 word = (char*)realloc(word, bytes_allocated + 2);
                 word[bytes_allocated++] = ch;
             }
