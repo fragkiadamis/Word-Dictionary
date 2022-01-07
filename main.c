@@ -5,6 +5,7 @@
 #include <math.h>
 
 #define HASH_TABLE_SIZE 1024
+#define DEBUG
 
 typedef struct position_node {
     int row;
@@ -31,31 +32,33 @@ typedef struct word_props {
     int row, col;
 } WORD_PROPS;
 
-void displayPositionList(POSITION_LIST *head) {
-    if(head != NULL) {
-        printf("row: %d, col: %d | ", head->row, head->col);
-        displayPositionList(head->next);
+#ifdef DEBUG
+    void displayPositionList(POSITION_LIST *head) {
+        if(head != NULL) {
+            printf("row: %d, col: %d | ", head->row, head->col);
+            displayPositionList(head->next);
+        }
     }
-}
 
-void displayFileList(FILE_LIST *head) {
-    if(head != NULL) {
-        printf("filename: %s, ", head->name);
-        displayPositionList(head->position);
-        displayFileList(head->next);
+    void displayFileList(FILE_LIST *head) {
+        if(head != NULL) {
+            printf("filename: %s, ", head->name);
+            displayPositionList(head->position);
+            displayFileList(head->next);
+        }
     }
-}
 
-void displayTree(WORD_TREE *root)
-{
-    if (root != NULL) {
-        displayTree(root->left);
-        printf("word: %s | ", root->word);
-        displayFileList(root->file);
-        putchar('\n');
-        displayTree(root->right);
+    void displayTree(WORD_TREE *root)
+    {
+        if (root != NULL) {
+            displayTree(root->left);
+            printf("word: %s | ", root->word);
+            displayFileList(root->file);
+            putchar('\n');
+            displayTree(root->right);
+        }
     }
-}
+#endif
 
 // Hashing function, calculates the position of a word in the hash table;
 int hashingFunction(char *word, int word_length) {
@@ -75,7 +78,6 @@ void newPositionListNode(POSITION_LIST **node, WORD_PROPS wordProps) {
     (*node)->row = wordProps.row;
     (*node)->col = wordProps.col;
     (*node)->next = NULL;
-//    printf("%s %s %d %d\n", wordProps.word, wordProps.filename, (*node)->row, (*node)->col);
 }
 
 void insertPositionListNode(POSITION_LIST **head, WORD_PROPS wordProps) {
@@ -202,12 +204,14 @@ int main(void) {
     }
     closedir(dr);
 
-    for(int i = 0; i < HASH_TABLE_SIZE; i++) {
-        if(hashTable[i] != NULL) {
-            displayTree(hashTable[i]);
-            puts("----------------------");
+    #ifdef DEBUG
+        for(int i = 0; i < HASH_TABLE_SIZE; i++) {
+            if(hashTable[i] != NULL) {
+                displayTree(hashTable[i]);
+                puts("----------------------");
+            }
         }
-    }
+    #endif
 
     return 0;
 }
