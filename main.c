@@ -70,62 +70,59 @@ int hashingFunction(char *word, int word_length) {
     return sum % HASH_TABLE_SIZE;
 }
 
-POSITION_LIST *newPositionListNode(WORD_PROPS wordProps) {
-    POSITION_LIST *node = (POSITION_LIST*)malloc(sizeof(POSITION_LIST));
-    node->row = wordProps.row;
-    node->col = wordProps.col;
-    node->next = NULL;
-    printf("%s %s %d %d\n", wordProps.word, wordProps.filename, node->row, node->col);
-    return node;
+void newPositionListNode(POSITION_LIST **node, WORD_PROPS wordProps) {
+    *node = (POSITION_LIST*)malloc(sizeof(POSITION_LIST));
+    (*node)->row = wordProps.row;
+    (*node)->col = wordProps.col;
+    (*node)->next = NULL;
+//    printf("%s %s %d %d\n", wordProps.word, wordProps.filename, (*node)->row, (*node)->col);
 }
 
-POSITION_LIST *insertPositionListNode(POSITION_LIST *head, WORD_PROPS wordProps) {
-    if(head == NULL)
-        return newPositionListNode(wordProps);
-    insertPositionListNode(head->next, wordProps);
-    return head;
+void insertPositionListNode(POSITION_LIST **head, WORD_PROPS wordProps) {
+    if(*head == NULL)
+        newPositionListNode(head, wordProps);
+    else
+        insertPositionListNode(&(*head)->next, wordProps);
 }
 
-FILE_LIST *newFileListNode(WORD_PROPS wordProps) {
-    FILE_LIST *node = (FILE_LIST*)malloc(sizeof(FILE_LIST));
-    node->name = (char*)malloc(strlen(wordProps.filename) * sizeof(char) + 1);
-    strcpy(node->name, wordProps.filename);
-    node->next = NULL;
-    node->position = insertPositionListNode(node->position = NULL, wordProps);
-    return node;
+void newFileListNode(FILE_LIST **node, WORD_PROPS wordProps) {
+    *node = (FILE_LIST*)malloc(sizeof(FILE_LIST));
+    (*node)->name = (char*)malloc(strlen(wordProps.filename) * sizeof(char) + 1);
+    strcpy((*node)->name, wordProps.filename);
+    (*node)->next = NULL;
+    (*node)->position = NULL;
+    insertPositionListNode(&(*node)->position, wordProps);
 }
 
-FILE_LIST *insertFileListNode(FILE_LIST *head, WORD_PROPS wordProps) {
-    if(head == NULL)
-        return newFileListNode(wordProps);
-    insertFileListNode(head->next, wordProps);
-    return head;
+void insertFileListNode(FILE_LIST **head, WORD_PROPS wordProps) {
+    if(*head == NULL)
+        newFileListNode(head, wordProps);
+    else
+        insertFileListNode(&(*head)->next, wordProps);
 }
 
-WORD_TREE *newTreeNode(WORD_PROPS wordProps){
-    WORD_TREE *node = (WORD_TREE*)malloc(sizeof(WORD_TREE));
-    node->word = (char*)malloc(strlen(wordProps.word) * sizeof(char) + 1);
-    strcpy(node->word, wordProps.word);
-    node->left = NULL;
-    node->right = NULL;
-    node->file = insertFileListNode(node->file = NULL, wordProps);
-    return node;
+void newTreeNode(WORD_TREE **node, WORD_PROPS wordProps){
+    *node = (WORD_TREE*)malloc(sizeof(WORD_TREE));
+    (*node)->word = (char*)malloc(strlen(wordProps.word) * sizeof(char) + 1);
+    strcpy((*node)->word, wordProps.word);
+    (*node)->left = NULL;
+    (*node)->right = NULL;
+    (*node)->file = NULL;
+    insertFileListNode(&(*node)->file, wordProps);
 }
 
-WORD_TREE *insertTreeNode(WORD_TREE *root, WORD_PROPS wordProps) {
-    if(root == NULL)
-        return newTreeNode(wordProps);
-
-    if(strcmp(root->word, wordProps.word) < 0)
-        root->left = insertTreeNode(root->left, wordProps);
-    else if(strcmp(root->word, wordProps.word) > 0)
-        root->right = insertTreeNode(root->right, wordProps);
-    else {
-        root->file = insertFileListNode(root->file, wordProps);
-        printf("%s %s %d %d\n", root->word, root->file->name, root->file->position->row, root->file->position->col);
+void insertTreeNode(WORD_TREE **root, WORD_PROPS wordProps) {
+    if(*root == NULL) {
+        newTreeNode(root, wordProps);
+        return;
     }
 
-    return root;
+    if(strcmp((*root)->word, wordProps.word) < 0)
+        insertTreeNode(&(*root)->left, wordProps);
+    else if(strcmp((*root)->word, wordProps.word) > 0)
+        insertTreeNode(&(*root)->right, wordProps);
+    else
+        insertFileListNode(&(*root)->file, wordProps);
 }
 
 int main(void) {
@@ -172,7 +169,7 @@ int main(void) {
                 if(ch == '\n' || ch == ' ') { // The word is over
                     wordProps.word[bytes_allocated] = '\0'; // Add null terminator
                     int pos = hashingFunction(wordProps.word, strlen(wordProps.word)); // Find the word's position in the hash table.
-                    hashTable[pos] = insertTreeNode(hashTable[pos], wordProps);
+                    insertTreeNode(&hashTable[pos], wordProps);
 
                     // Default the word and continue to next one.
                     free(wordProps.word);
@@ -205,12 +202,12 @@ int main(void) {
     }
     closedir(dr);
 
-//    for(int i = 0; i < HASH_TABLE_SIZE; i++) {
-//        if(hashTable[i] != NULL) {
-//            displayTree(hashTable[i]);
-//            puts("----------------------");
-//        }
-//    }
+    for(int i = 0; i < HASH_TABLE_SIZE; i++) {
+        if(hashTable[i] != NULL) {
+            displayTree(hashTable[i]);
+            puts("----------------------");
+        }
+    }
 
     return 0;
 }
