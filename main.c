@@ -58,25 +58,25 @@ typedef struct word_props {
  * if DEBUG is defined, print the structure
 */
 #ifdef DEBUG
-    /* Displays the list nodes that store the position in a file of a word */
-    void displayPositionList(POSITION_LIST *head) {
-        if(head != NULL) {
-            printf("row: %d, col: %d | ", head->row, head->col);
-            displayPositionList(head->next);
-        }
+/* Displays the list nodes that store the position in a file of a word */
+void displayPositionList(POSITION_LIST *head) {
+    if(head != NULL) {
+        printf("row: %d, col: %d | ", head->row, head->col);
+        displayPositionList(head->next);
     }
+}
 
-    /* Displays the list nodes that store the filenames that a word exists */
-    void displayFileList(FILE_LIST *head) {
-        if(head != NULL) {
-            printf("filename: %s, ", head->name);
-            displayPositionList(head->position);
-            displayFileList(head->next);
-        }
+/* Displays the list nodes that store the filenames that a word exists */
+void displayFileList(FILE_LIST *head) {
+    if(head != NULL) {
+        printf("filename: %s, ", head->name);
+        displayPositionList(head->position);
+        displayFileList(head->next);
     }
+}
 
-    /* Displays the tree nodes that store a word, and it's respective lists */
-    void displayTree(WORD_TREE *root) {
+/* Displays the tree nodes that store a word, and it's respective lists */
+void displayTree(WORD_TREE *root) {
         if (root != NULL) {
             displayTree(root->left);
             printf("word: %s | ", root->word);
@@ -263,15 +263,15 @@ int main(void) {
     }
     closedir(dr);
 
-    #ifdef DEBUG
-        for(unsigned short i = 0; i < HASH_TABLE_SIZE; i++) {
-            if(hashTable[i] != NULL) {
-                printf("Hash: %d\n", i);
-                displayTree(hashTable[i]);
-                puts("----------------------");
-            }
+#ifdef DEBUG
+    for(unsigned short i = 0; i < HASH_TABLE_SIZE; i++) {
+        if(hashTable[i] != NULL) {
+            printf("Hash: %d\n", i);
+            displayTree(hashTable[i]);
+            puts("----------------------");
         }
-    #endif
+    }
+#endif
 
     char *searchString = (char*)malloc(2 * sizeof(char));
     bytes_allocated = 0;
