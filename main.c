@@ -5,7 +5,7 @@
 #include <math.h>
 
 #define HASH_TABLE_SIZE 1024 // The size of the hash table
-#define DEBUG // Uncomment for printing
+#define DEBUG // Uncomment for debug printing
 
 /*
  * The position list node. The position of a word
@@ -235,11 +235,7 @@ int main(void) {
                     pos = hashingFunction(wordProps.word, strlen(wordProps.word)); // Find the word's position in the hash table.
                     traverseTree(&hashTable[pos], &wordProps);
 
-                    // Default the word pointer before continuing to next one.
-                    free(wordProps.word);
-                    wordProps.word = (char*)malloc(2 * sizeof(char));
                     bytes_allocated = 0;
-
                     newWord = 1;
                     if (ch == '\n') {
                         wordProps.row++; // Increase row
@@ -270,7 +266,7 @@ int main(void) {
     #ifdef DEBUG
         for(unsigned short i = 0; i < HASH_TABLE_SIZE; i++) {
             if(hashTable[i] != NULL) {
-                printf("Hash: %d, ", i);
+                printf("Hash: %d\n", i);
                 displayTree(hashTable[i]);
                 puts("----------------------");
             }
@@ -297,7 +293,6 @@ int main(void) {
         else
             puts("The word does not exist in the dictionary");
     }
-
     free(searchString);
 
     return 0;
