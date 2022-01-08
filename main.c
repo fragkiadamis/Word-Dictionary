@@ -13,8 +13,8 @@
  * The list head is stored in the file node of the respective file
 */
 typedef struct position_node {
-    int row;
-    int col;
+    unsigned short row;
+    unsigned short col;
     struct position_node *next;
 } POSITION_LIST;
 
@@ -51,7 +51,7 @@ typedef struct word_node {
 typedef struct word_props {
     char *word;
     char *filename;
-    int row, col;
+    unsigned short row, col;
 } WORD_PROPS;
 
 /*
@@ -88,9 +88,9 @@ typedef struct word_props {
 #endif
 
 /* Hashing function, calculates the position of a word in the hash table; */
-int hashingFunction(char *word, int word_length) {
-    int sum = 0;
-    int characterCount = 0;
+unsigned short hashingFunction(char *word, unsigned short word_length) {
+    unsigned short sum = 0;
+    unsigned short characterCount = 0;
     while (*word) {
         sum += pow(2, (word_length - characterCount)) * (int) *word;
         characterCount++;
@@ -100,6 +100,7 @@ int hashingFunction(char *word, int word_length) {
     return sum % HASH_TABLE_SIZE;
 }
 
+/* Create new position list node */
 void newPositionListNode(POSITION_LIST **node, WORD_PROPS *wordProps) {
     *node = (POSITION_LIST*)malloc(sizeof(POSITION_LIST));
     (*node)->row = (*wordProps).row;
@@ -107,29 +108,35 @@ void newPositionListNode(POSITION_LIST **node, WORD_PROPS *wordProps) {
     (*node)->next = NULL;
 }
 
-void insertPositionListNode(POSITION_LIST **head, WORD_PROPS *wordProps) {
-    if(*head == NULL)
-        newPositionListNode(head, wordProps);
+/* Traverse the position list and insert a node */
+void traversePositionList(POSITION_LIST **listNode, WORD_PROPS *wordProps) {
+    if(*listNode == NULL)
+        newPositionListNode(listNode, wordProps);
     else
-        insertPositionListNode(&(*head)->next, wordProps);
+        traversePositionList(&(*listNode)->next, wordProps);
 }
 
+/* Create new file list node */
 void newFileListNode(FILE_LIST **node, WORD_PROPS *wordProps) {
     *node = (FILE_LIST*)malloc(sizeof(FILE_LIST));
     (*node)->name = (char*)malloc(strlen((*wordProps).filename) * sizeof(char) + 1);
     strcpy((*node)->name, (*wordProps).filename);
     (*node)->next = NULL;
     (*node)->position = NULL;
-    insertPositionListNode(&(*node)->position, wordProps);
+
+    /* Create the position list of the file list */
+    traversePositionList(&(*node)->position, wordProps);
 }
 
-void insertFileListNode(FILE_LIST **head, WORD_PROPS *wordProps) {
-    if(*head == NULL)
-        newFileListNode(head, wordProps);
+/* Traverse the file list and insert a node */
+void traverseFileList(FILE_LIST **listNode, WORD_PROPS *wordProps) {
+    if(*listNode == NULL)
+        newFileListNode(listNode, wordProps);
     else
-        insertFileListNode(&(*head)->next, wordProps);
+        traverseFileList(&(*listNode)->next, wordProps);
 }
 
+/* Create a tree node */
 void newTreeNode(WORD_TREE **node, WORD_PROPS *wordProps){
     *node = (WORD_TREE*)malloc(sizeof(WORD_TREE));
     (*node)->word = (char*)malloc(strlen((*wordProps).word) * sizeof(char) + 1);
@@ -137,26 +144,53 @@ void newTreeNode(WORD_TREE **node, WORD_PROPS *wordProps){
     (*node)->left = NULL;
     (*node)->right = NULL;
     (*node)->file = NULL;
-    insertFileListNode(&(*node)->file, wordProps);
+
+    /* Create the file list of the tree node */
+    traverseFileList(&(*node)->file, wordProps);
 }
 
 /* Traverse the tree to find the leaves */
-void insertTreeNode(WORD_TREE **root, WORD_PROPS *wordProps) {
-    if(*root == NULL) {
-        newTreeNode(root, wordProps);
-        return;
-    }
+void traverseTree(WORD_TREE **treeNode, WORD_PROPS *wordProps) {
+    if(*treeNode == NULL) // Root of the tree is null
+        newTreeNode(treeNode, wordProps);
 
-    if(strcmp((*root)->word, (*wordProps).word) < 0)
-        insertTreeNode(&(*root)->left, wordProps);
-    else if(strcmp((*root)->word, (*wordProps).word) > 0)
-        insertTreeNode(&(*root)->right, wordProps);
-    else
-        insertFileListNode(&(*root)->file, wordProps);
+    // Traverse the tree
+    else if(strcmp((*treeNode)->word, (*wordProps).word) < 0) // The word alphabetically is first
+        traverseTree(&(*treeNode)->left, wordProps);
+    else if(strcmp((*treeNode)->word, (*wordProps).word) > 0) // The word alphabetically is second
+        traverseTree(&(*treeNode)->right, wordProps);
+    else // The word already exists in the tree, add the new list nodes (either file node and position node or just position node)
+        traverseFileList(&(*treeNode)->file, wordProps);
+}
+
+/* Search tree and return node */
+WORD_TREE *searchTree(WORD_TREE *root, char *searchString) {
+    if(root == NULL)
+        return NULL;
+
+    if(strcmp(root->word, searchString) < 0)
+        return searchTree(root->left, searchString);
+    else if(strcmp(root->word, searchString) > 0)
+        return searchTree(root->right, searchString);
+    else if(strcmp(root->word, searchString) == 0)
+        return root;
+}
+
+/* Display the filenames of the word and the positions inside them */
+void displayWordData(WORD_TREE *treeNode) {
+    while(treeNode->file != NULL) {
+        // For each position of the word in file display the filename alongside the position.
+        while(treeNode->file->position != NULL) {
+            printf("%s (%d, %d)\n", treeNode->file->name, treeNode->file->position->row, treeNode->file->position->col);
+            treeNode->file->position = treeNode->file->position->next;
+        }
+        treeNode->file = treeNode->file->next;
+    }
 }
 
 int main(void) {
     char ch, *path = "/home/fragkiadamis/CLionProjects/Assignment_2/files/";
+    unsigned short bytes_allocated = 0, pos = 0;
     struct dirent *de;
     FILE *fptr;
     WORD_TREE *hashTable[HASH_TABLE_SIZE] = {NULL};
@@ -169,6 +203,7 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
+    puts("Creating the dictionary...");
     // While there are directory entries...
     while ((de = readdir(dr)) != NULL)
     {
@@ -182,24 +217,23 @@ int main(void) {
             strcat(strcat(filePath, path), de->d_name);
             fptr = fopen(filePath, "r");
 
-            int newWord = 1;
+            unsigned short newWord = 1;
+            unsigned short colIndex = 0;
+
             WORD_PROPS wordProps;
-            wordProps.filename = de->d_name;
             wordProps.word = (char*)malloc(2 * sizeof(char));
             wordProps.filename = (char*)malloc(strlen(de->d_name) * sizeof(char) + 1);
             strcpy(wordProps.filename, de->d_name);
             wordProps.row = 1;
             wordProps.col = 0;
-            int bytes_allocated = 0;
-            int colIndex = 0;
 
             // While it's not the End Of File...
             // Isolate each word. Words are distinguished by either a space or a newline
             while((ch = fgetc(fptr)) != EOF) {
                 if(ch == '\n' || ch == ' ') { // The word is over
                     wordProps.word[bytes_allocated] = '\0'; // Add null terminator
-                    int pos = hashingFunction(wordProps.word, strlen(wordProps.word)); // Find the word's position in the hash table.
-                    insertTreeNode(&hashTable[pos], &wordProps);
+                    pos = hashingFunction(wordProps.word, strlen(wordProps.word)); // Find the word's position in the hash table.
+                    traverseTree(&hashTable[pos], &wordProps);
 
                     // Default the word pointer before continuing to next one.
                     free(wordProps.word);
@@ -218,7 +252,8 @@ int main(void) {
 
                 // Append character to word
                 wordProps.word = (char*)realloc(wordProps.word, bytes_allocated + 2);
-                wordProps.word[bytes_allocated++] = ch;
+                wordProps.word[bytes_allocated] = ch;
+                bytes_allocated++;
                 colIndex++;
 
                 if (newWord) {
@@ -233,13 +268,37 @@ int main(void) {
     closedir(dr);
 
     #ifdef DEBUG
-        for(int i = 0; i < HASH_TABLE_SIZE; i++) {
+        for(unsigned short i = 0; i < HASH_TABLE_SIZE; i++) {
             if(hashTable[i] != NULL) {
+                printf("Hash: %d, ", i);
                 displayTree(hashTable[i]);
                 puts("----------------------");
             }
         }
     #endif
+
+    char *searchString = (char*)malloc(2 * sizeof(char));
+    bytes_allocated = 0;
+    puts("Enter a word for search");
+    while((ch = getchar()) != '\n') {
+        searchString = (char*)realloc(searchString, bytes_allocated + 2);
+        searchString[bytes_allocated] = ch;
+        bytes_allocated++;
+    }
+    searchString[bytes_allocated] = '\0';
+    pos = hashingFunction(searchString, strlen(searchString));
+
+    if(hashTable[pos] == NULL)
+        puts("The word does not exist in the dictionary");
+    else {
+        WORD_TREE *treeNode = searchTree(hashTable[pos], searchString);
+        if(treeNode)
+            displayWordData(treeNode);
+        else
+            puts("The word does not exist in the dictionary");
+    }
+
+    free(searchString);
 
     return 0;
 }
